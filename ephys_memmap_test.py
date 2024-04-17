@@ -25,6 +25,8 @@ def play_audio(traces, start_time, duration, channel):
 
     play_obj = sa.play_buffer(audio_data, 1, 2, SOUNDRATE)
     play_obj.wait_done()
+
+
 tic = lambda : time.perf_counter()
 toc = lambda : tic()
 elapsed = lambda x : time.perf_counter() - x
