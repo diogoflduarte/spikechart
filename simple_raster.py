@@ -104,7 +104,7 @@ def parse_contents(contents, filename):
     try:
         if 'csv' in filename:
             return pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-        elif filename.endswith('.npy'):
+        elif 'npy' in filename:
             return np.load(io.BytesIO(decoded), allow_pickle=True)
     except Exception as e:
         print(e)
