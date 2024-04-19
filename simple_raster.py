@@ -1,6 +1,7 @@
 import dash
-from dash import dcc, html
-from dash.dependencies import Input, Output
+from dash import dcc, html, callback_context
+from dash.dependencies import Input, Output, State
+import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
@@ -10,7 +11,7 @@ import simpleaudio as sa
 from config import *
 
 # Initialize the Dash app
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 cols = ['sessionwise_time', 'FR_SwOn', 'FR_StOn', 'HR_SwOn', 'HR_StOn', 'FL_SwOn', 'FL_StOn', 'HL_SwOn', 'HL_StOn']
 
 st_file = ST
@@ -58,6 +59,20 @@ app.layout = html.Div(children=[
         value='FR_SwOn'
     ),
     dcc.Graph(id='raster-plot'),
+    dbc.Container([
+        dbc.Row([
+            dbc.Col(html.Div([
+                html.Label("Start Time (s):"),
+                dcc.Input(id="input-start-time", type="number", value=0, style={'marginRight':'10px'}),
+                html.Label("Duration (s):"),
+                dcc.Input(id="input-duration", type="number", value=1, style={'marginRight':'10px'}),
+                html.Label("Channel:"),
+                dcc.Input(id="input-channel", type="number", value=0, style={'marginRight':'10px'}),
+                dbc.Button("Play Audio", id="play-audio-button", color="primary"),
+            ]), width=12)
+        ])
+    ]),
+    html.Div(id="audio-status", children="Audio Status: Not Playing", style={'color': 'black', 'marginTop': '20px'})
 ])
 
 @app.callback(
@@ -98,9 +113,18 @@ def update_raster(selected_cluster, tmin, tmax, ntrials, msize, feature):
     )
     return fig
 
-def normalizeTo1(a):
-    return a/np.max(np.abs(a))
-def play_audio(traces, start_time, duration, channel):
+@app.callback(
+    Output('audio-status', 'style'),
+    Output('audio-status', 'children'),
+    Input('play-audio-button', 'n_clicks'),
+    State('input-start-time', 'value'),
+    State('input-duration', 'value'),
+    State('input-channel', 'value'),
+    prevent_initial_call=True
+)
+def play_audio(n_clicks, start_time, duration, channel):
+    if not callback_context.triggered:
+        return {'color': 'black'}, "Audio Status: Not Playing"
     SOUNDRATE = 44100
     sample_rate = int(30000)
 
@@ -108,18 +132,26 @@ def play_audio(traces, start_time, duration, channel):
     end_index = start_index + int(duration * sample_rate)
     channel = int(channel)
 
-    audio_data = traces[start_index:end_index, channel]
+    audio_data = dat[start_index:end_index, channel]
     audio_data = (normalizeTo1(audio_data) * np.iinfo(np.int16).max).astype(np.int16)
-    # audio_data = (audio_data * 32767).astype(np.int16)
-
-    # re-sample to 44100
     audio_data = np.interp(np.linspace(0, 1, int(duration*SOUNDRATE),   endpoint=False),
                            np.linspace(0, 1, int(duration*sample_rate), endpoint=False),
                            audio_data)
     audio_data = audio_data.astype(np.int16)
 
     play_obj = sa.play_buffer(audio_data, 1, 2, SOUNDRATE)
-    play_obj.wait_done()
+    style = {'color': 'green', 'marginTop': '20px'}
+    children = "Audio Status: Playing"
+
+    # Wait for audio to finish
+    # play_obj.wait_done()
+
+    # Change color to red once finished
+    return style, children
+
+def normalizeTo1(a):
+    return a/np.max(np.abs(a))
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
