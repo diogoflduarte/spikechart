@@ -6,18 +6,25 @@ import plotly.express as px
 import numpy as np
 import pandas as pd
 from base64 import b64encode
+from config import *
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
+cols = ['sessionwise_time', 'FR_SwOn', 'FR_StOn', 'HR_SwOn', 'HR_StOn', 'FL_SwOn', 'FL_StOn', 'HL_SwOn', 'HL_StOn']
+
+st_file = ST
+sc_file = SC
+bh_file = BH
+
 
 sampling_rate = 30000.0  # Example: 30 kHz
 # Load your data
 print('Reading neural data')
-spike_times     = np.load(r'X:\data\2022\BATCH5\recordings\VIV_23058\VIV_23058_S10_g1\VIV_23058_S10_g1_imec0_ks25\spike_times.npy')
+spike_times     = np.load(st_file)
 spike_times = spike_times.squeeze()/sampling_rate
-spike_clusters  = np.load(r'X:\data\2022\BATCH5\recordings\VIV_23058\VIV_23058_S10_g1\VIV_23058_S10_g1_imec0_ks25\spike_clusters.npy')
+spike_clusters  = np.load(sc_file)
 print('Reading behavioral data')
-behavior = pd.read_csv(r'X:\data\2022\BATCH5\processing\VIV_23058\S10\VIV_23058_S10_behavioral_descriptor.csv')
+behavior = pd.read_csv(bh_file, usecols=cols)
 feat = 'FR_SwOn'
 print('Done')
 
@@ -82,10 +89,6 @@ def update_raster(selected_cluster, tmin, tmax, ntrials, msize, feature):
         title='Cluster ' + str(selected_cluster),
     )
     return fig
-    # img_bytes = fig.to_image(format="png")
-    # encoding = b64encode(img_bytes).decode()
-    # img_b64 = "data:image/png;base64," + encoding
-    # return html.Img(src=img_b64, style={'height': '500px'})
 
 if __name__ == '__main__':
     app.run_server(debug=True)
